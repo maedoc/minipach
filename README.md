@@ -118,7 +118,7 @@ a shared storage system, it makes more sense to save such automation for push/pu
 operations.  e.g. on a push, the queue system is triggered to handle job processing
 and the datasets are updated as job results become available.
 
-# still content hashing
+## still content hashing
 
 still need a clear mechanism to resolve job specs, figure out unique work required.
 this could use a subset of pach's syntax, implement as a few hundred line pyhton file.
@@ -132,3 +132,19 @@ lay out quickly a new project or cookiecutter pipelines from existing content li
 or makefile.
 
 datalad could be used for singularity containers as well... hm. 
+
+## eventing
+
+Ideally we just want to push data into repo and everything happens for us.  If we're using
+files and folders, then this could be do with an inotify style mechanism:
+
+https://unix.stackexchange.com/a/323919
+
+```
+inotifywait -m /repos -e create -e moved_to |
+    while read directory action file; do
+        if [[ "$file" =~ .*yml$ ]]; then # Does the file end with .xml?
+            minipach schedule jobs  # or whatever
+        fi
+    done
+```
