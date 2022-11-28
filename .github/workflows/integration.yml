@@ -20,3 +20,26 @@ jobs:
           kubectl get pods -n kube-system
           echo "current-context:" $(kubectl config current-context)
           echo "environment-kubeconfig:" ${KUBECONFIG}
+
+      - name: Get pachctl
+        run: curl -o /tmp/pachctl.deb -L https://github.com/pachyderm/pachyderm/releases/download/v2.3.9/pachctl_2.3.9_amd64.deb && sudo dpkg -i /tmp/pachctl.deb  
+
+
+      - name: Helm it up
+        run: |
+          helm repo add pach https://helm.pachyderm.com  
+          helm repo update 
+
+      - name: Run pach
+        run: helm install --wait --timeout 10m pachd pach/pachyderm --set deployTarget=LOCAL  
+
+      - name: Trust but verify
+        run: |
+          kubectl get pods
+          pachctl config import-kube local --overwrite
+          pachctl config set active-context local
+          pachctl port-forward &
+          sleep 5
+          pachctl version
+          curl 'localhost:4000'
+
