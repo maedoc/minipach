@@ -193,10 +193,9 @@ Some contraints take into account to get benefits:
 - data driven => gitea/minio notifications, inotify, ci system
 
 Each of these contraints can be relaxed w/o compromising the whole idea, but
-a full running system w/ datalad, snakemake, gitea & minio requires
-just a Python env for datalad & the gitea & minio binaries.  The resulting
-Docker image is about 200 MB, though each part could be installed by a user
-e.g. in their $HOME on an HPC system if required. 
+a full running example w/ datalad, snakemake, gitea & minio would require
+just a Python env for datalad & the gitea & minio binaries, installable in
+single 2GB container or multiple or just in a $PREFIX or a user $HOME.
 
 ## Tools
 
