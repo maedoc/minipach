@@ -286,7 +286,7 @@ execution. A few options
 - git or datalad pre-commit hook to run the workflow
 - gitea/github web hook notification on commit, to a job queue 
 - gitea/github ci-style system which invokes datalad run & snakemake to schedule/scale
-
+  - simple python-based ci runner https://github.com/DavesCodeMusings/tea-runner/wiki#understanding-how-tea-runner-works
 A nuance of this step is that each commit potentially results in a second "results
 data" commit, except maybe a pre-commit hook option.
 
