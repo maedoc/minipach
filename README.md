@@ -1,5 +1,18 @@
 A miniature Pachyderm idea to complement Datalad.
 
+## Datalad YODA principles
+
+https://handbook.datalad.org/en/latest/basics/101-127-yoda.html
+
+- use modular hierarchical datasets 
+  - but ~300k overhead per repo, so compression is helpful)
+  - use compression and lazy fetch when possible
+- keep containers for steps & use for run-record
+- 
+
+
+## Pachyderm principles
+
 Pach has notion of repos.  You put files into repos, and they're content hashed,
 much like Datalad.
 
@@ -148,3 +161,139 @@ inotifywait -m /repos -e create -e moved_to |
         fi
     done
 ```
+
+A "cloud-native" solution example would be Argo Workflows.
+
+## scaling complexity
+
+One of the goals is to find a way to smoothly scale complexity: Pachyderm
+is nice but requires a kubernetes cluster.  On a Slurm system with shared
+storage, the approach will be completely different.  On a local machine,
+it's again another story. 
+
+What doesn't usually change
+
+- the datasets
+- the computation to do
+- the results
+
+What is changing across deployments
+
+- storage
+- scheduling
+- parallelism
+
+The goal here is to use the same tools locally and on clusters (hpc or k8s).
+Some contraints take into account to get benefits:
+
+- transactional versioned data w/ provenance => datalad
+- shared metadata tracking => gitea
+- storage is not shared => adopt object store w/ minio
+- scheduling diverse => snakemake, queue, ci system
+- data driven => gitea/minio notifications, inotify, ci system
+
+Each of these contraints can be relaxed w/o compromising the whole idea, but
+a full running system w/ datalad, snakemake, gitea & minio requires
+just a Python env for datalad & the gitea & minio binaries.  The resulting
+Docker image is about 200 MB, though each part could be installed by a user
+e.g. in their $HOME on an HPC system if required. 
+
+## Tools
+
+We can look at each tool itself to see the haves and have-nots:
+
+### Datalad by itself
+
+Datalad by itself is great for transactional data and provenance, but doesn't
+provide compute scheduling, storage, centralized metadata.
+
+### Snakemake by itself
+
+Snakemake describes and runs workflows, but doesn't provide transactional versioning of data.  It
+doesn't orchestrate compute but can talk to schedulers (HPC & K8s) and deal with remote
+storage.
+
+### s3/minio by itself
+
+Object storage is easier and cheaper than shared filesystems and can notify when data is modified,
+but doesn't provide compute.
+
+### Gitea/GitLab/GitHub
+
+These centralize metadata and project management, can notify on changes to datalad repo, but doesn't
+provide compute scheduling or data provenance. 
+
+## Tool combinations
+
+It's not obvious that all tools are needed.  For many users, the extra complexity may not
+be warranted.
+
+### Pachyderm
+
+Namesake of this repo, provides transactional versioned data (xdvc), workflows, sharing, scaling, but it's neither open source nor free and only runs on k8s. 
+
+### Snakemake and Gitea/GitHub/GitLab
+
+This is probably a frequently used combination: workflow scheduling and code sharing, but data versioning and sharing are ad-hoc.
+
+### Datalad and Snakemake
+
+xvdc & workflows, but only with local copy on local resources.  Scaling
+and/or sharing is ad-hoc.
+
+### Datalad + minio
+
+xdvc + scalable storage, but workflow scheduling or centralized metadata is ad-hoc.
+
+### Datalad + Gitea et al
+
+xdvc + centralized metadata but workflows or large file support is ad-hoc
+
+### Snakemake/object storage/Gitea
+
+Centralized code, workflows etc but data versioning is ad-hoc and recording provenance from snakemake is ad-hoc.
+
+### Object storage and Gitea/GitHub
+
+this is datalad the manual way, but workflow & provenance are ad-hoc.
+
+## Example
+
+A worked example for local use (see Dockerfile for all software) would go like this
+
+- start minio server & create bucket for datalad files
+- start gitea server for git repos
+- configure datalad repo w/ minio bucket as storage
+- commit raw data into datalad repo
+- push commits to gitea (which pushes files to minio)
+
+so far, no workflow is defined, this looks like a datalad repo available
+to other machines on the local network.  Usually at this point, a user
+needs to invoke workflows by hand (maybe via `datalad run`).
+
+- add workflow sources (Makefile, snake, sbatch script whatever)
+- datalad run workflows.sh
+- push results to repo
+
+If we push more/new/changed data to the repo, new or update results are not
+automatically computed. This seems like a minor point when a user is developing
+the workflow and constantly testing, but over time, it can cause skew between
+what's been computed and what's be written in the workflow.
+
+The final step is to ensure that datalad commits automatically result in workflow
+execution. A few options
+
+- git or datalad pre-commit hook to run the workflow
+- gitea/github web hook notification on commit, to a job queue 
+- gitea/github ci-style system which invokes datalad run & snakemake to schedule/scale
+
+A nuance of this step is that each commit potentially results in a second "results
+data" commit, except maybe a pre-commit hook option.
+
+## Files only please
+
+Maybe starting networked servers is a problem. The above simplifies to
+
+- no gitea, just a plain git repo
+- no minio, just git-annex to track big files
+- no ci server or web hook, just a datalad hook, inotifywait- or watch-driven workflow exec
