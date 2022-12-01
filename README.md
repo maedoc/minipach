@@ -186,10 +186,10 @@ What is changing across deployments
 The goal here is to use the same tools locally and on clusters (hpc or k8s).
 Some contraints take into account to get benefits:
 
-- transactional versioned data w/ provenance => datalad
+- transactional versioned data w/ provenance => datalad or s3git
 - shared metadata tracking => gitea
-- storage is not shared => adopt object store w/ minio
-- scheduling diverse => snakemake, queue, ci system
+- storage is not shared => adopt object store w/ minio or ceph or whatever
+- scheduling diverse => snakemake or dask or slurm or ci system
 - data driven => gitea/minio notifications, inotify, ci system
 
 Each of these contraints can be relaxed w/o compromising the whole idea, but
